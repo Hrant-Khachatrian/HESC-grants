@@ -40,7 +40,6 @@ main{max-width:1320px;margin:-31px auto 60px;padding:0 22px;position:relative}.g
         <div class="field"><label for="ai">AI / ML relevance</label><select id="ai"></select></div>
         <div class="field"><label for="funding">Funding availability / range</label><select id="funding"></select></div>
         <div class="field"><label for="record">Record identifier</label><select id="record"></select></div>
-        <div class="field"><label for="quality">Extraction quality</label><select id="quality"></select></div>
         <div class="field"><label for="mode">Annex extraction mode</label><select id="mode"></select></div>
       </div>
     </div>
@@ -71,7 +70,7 @@ main{max-width:1320px;margin:-31px auto 60px;padding:0 22px;position:relative}.g
 const DATA=JSON.parse(document.getElementById('dataset').textContent),R=DATA.records,M=DATA.meta;
 const $=id=>document.getElementById(id),fmt=new Intl.NumberFormat('en-US'),collator=new Intl.Collator(['hy','en'],{numeric:true,sensitivity:'base'});
 const labels={ai:{shortlisted_yes:'Shortlisted · AI/ML',shortlisted_possible:'Shortlisted · possible',keyword_candidate:'Keyword candidate',not_flagged:'Not flagged'},funding:{not_stated:'Not stated',reported_unparsed:'Reported · unparsed',under_10m:'Under AMD 10m', '10m_25m':'AMD 10m–25m','25m_50m':'AMD 25m–50m','50m_plus':'AMD 50m+'},record:{coded:'Official code',generated:'Generated ID',placeholder:'Image-only placeholder'},quality:{structured:'Structured',partial:'Partial',sparse:'Sparse',manual_partial:'Manual partial',image_placeholder:'Image-only placeholder'},completeness:{complete:'Fields complete',partial:'Some fields not stated',sparse:'Several fields not stated'}};
-const filterIds=['year','call','institution','topic','ai','funding','record','quality','mode'];let page=1,sort='date:desc',filtered=R;
+const filterIds=['year','call','institution','topic','ai','funding','record','mode'];let page=1,sort='date:desc',filtered=R;
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function option(value,label,count){return `<option value="${esc(value)}">${esc(label)}${count==null?'':` (${fmt.format(count)})`}</option>`}
 function setup(){
@@ -82,7 +81,6 @@ function setup(){
  $('ai').innerHTML=option('','All relevance',R.length)+Object.entries(labels.ai).map(([v,l])=>option(v,l,R.filter(r=>r.ai===v).length)).join('');
  $('funding').innerHTML=option('','All funding records',R.length)+Object.entries(labels.funding).map(([v,l])=>option(v,l,R.filter(r=>r.fundingBand===v).length)).join('');
  $('record').innerHTML=option('','All identifiers',R.length)+Object.entries(labels.record).map(([v,l])=>option(v,l,R.filter(r=>r.recordType===v).length)).join('');
- $('quality').innerHTML=option('','All quality levels',R.length)+Object.entries(labels.quality).map(([v,l])=>option(v,l,R.filter(r=>r.quality===v).length)).join('');
  const modes=[...new Set(R.map(r=>r.extractionMode))].sort(collator.compare);$('mode').innerHTML=option('','All extraction modes',R.length)+modes.map(v=>option(v,v,R.filter(r=>r.extractionMode===v).length)).join('');
  const p=new URLSearchParams(location.search);$('q').value=p.get('q')||'';filterIds.forEach(id=>{const v=p.get(id)||'';if([...$(id).options].some(o=>o.value===v))$(id).value=v});sort=p.get('sort')||'date:desc';if([...$('sort').options].some(o=>o.value===sort))$('sort').value=sort;const ps=p.get('pageSize');if([...$('pageSize').options].some(o=>o.value===ps))$('pageSize').value=ps;page=Math.max(1,+(p.get('page')||1));
  const hasAdvancedFilter=filterIds.some(id=>$(id).value);setFiltersExpanded(hasAdvancedFilter);
@@ -95,7 +93,7 @@ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 function setFiltersExpanded(expanded){$('advanced-filters').hidden=!expanded;$('toggle-filters').setAttribute('aria-expanded',String(expanded));$('toggle-filters').textContent=expanded?'Hide filters':'Show filters'}
 function reset(){$('q').value='';filterIds.forEach(id=>$(id).value='');sort='date:desc';$('sort').value=sort;$('pageSize').value='50';page=1;apply(false)}
 function searchable(r){return `${r.code} ${r.pi} ${r.title} ${r.host} ${r.institution} ${r.raw} ${r.callTitle} ${r.topic}`.toLocaleLowerCase('hy')}
-function apply(resetPage){if(resetPage)page=1;const terms=$('q').value.trim().toLocaleLowerCase('hy').split(/\s+/).filter(Boolean);filtered=R.filter(r=>terms.every(t=>searchable(r).includes(t))&&(!$('year').value||r.year===$('year').value)&&(!$('call').value||r.callId===$('call').value)&&(!$('institution').value||r.institution===$('institution').value)&&(!$('topic').value||r.topic===$('topic').value)&&(!$('ai').value||r.ai===$('ai').value)&&(!$('funding').value||r.fundingBand===$('funding').value)&&(!$('record').value||r.recordType===$('record').value)&&(!$('quality').value||r.quality===$('quality').value)&&(!$('mode').value||r.extractionMode===$('mode').value));
+function apply(resetPage){if(resetPage)page=1;const terms=$('q').value.trim().toLocaleLowerCase('hy').split(/\s+/).filter(Boolean);filtered=R.filter(r=>terms.every(t=>searchable(r).includes(t))&&(!$('year').value||r.year===$('year').value)&&(!$('call').value||r.callId===$('call').value)&&(!$('institution').value||r.institution===$('institution').value)&&(!$('topic').value||r.topic===$('topic').value)&&(!$('ai').value||r.ai===$('ai').value)&&(!$('funding').value||r.fundingBand===$('funding').value)&&(!$('record').value||r.recordType===$('record').value)&&(!$('mode').value||r.extractionMode===$('mode').value));
  const [key,dir]=sort.split(':');filtered.sort((a,b)=>{let av=a[key],bv=b[key];if(key==='fundingValue'){av=av??(dir==='asc'?Infinity:-Infinity);bv=bv??(dir==='asc'?Infinity:-Infinity);return (av-bv)*(dir==='asc'?1:-1)}return collator.compare(av??'',bv??'')*(dir==='asc'?1:-1)});render();persist()}
 function persist(){const p=new URLSearchParams();if($('q').value.trim())p.set('q',$('q').value.trim());filterIds.forEach(id=>{if($(id).value)p.set(id,$(id).value)});if(sort!=='date:desc')p.set('sort',sort);if($('pageSize').value!=='50')p.set('pageSize',$('pageSize').value);if(page>1)p.set('page',page);history.replaceState(null,'',location.pathname+(p.toString()?`?${p}`:'')+location.hash)}
 function tag(text,cls='neutral'){return `<span class="tag ${cls}">${esc(text)}</span>`}
